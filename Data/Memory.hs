@@ -1,12 +1,12 @@
-module Memory ( Byte
-              , Word
-              , Memory
-              , writeByte
-              , writeWord
-              , byteAt
-              , wordAt
-              , fromByteString
-              ) where
+module Data.Memory ( Byte
+                   , Word
+                   , Memory
+                   , writeByte
+                   , writeWord
+                   , byteAt
+                   , wordAt
+                   , fromByteString
+                   ) where
 
 import Data.Array
 import Data.Word (Word8, Word16)
