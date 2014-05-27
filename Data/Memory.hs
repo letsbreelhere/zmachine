@@ -6,6 +6,8 @@ module Data.Memory ( Byte
                    , byteAt
                    , wordAt
                    , fromByteString
+                   , bytes
+                   , word
                    ) where
 
 import Data.Array

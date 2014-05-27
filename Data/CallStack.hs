@@ -7,6 +7,7 @@ module Data.CallStack ( StackFrame
                       , top
                       , bottom
                       , discard
+                      , NEList(..)
                       ) where
 
 import Control.Lens
