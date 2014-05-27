@@ -19,7 +19,7 @@ type Word = Word16
 data Memory = Memory { unwrapMem :: Array Int Word8 }
 
 bytes :: Word -> (Byte, Byte)
-bytes w = (fromIntegral (w .&. 0xff), fromIntegral (w `shiftR` 8))
+bytes w = (fromIntegral (w `shiftR` 8), fromIntegral (w .&. 0xff))
 
 word :: Byte -> Byte -> Word
 word b1 b2 = 0x100 * fromIntegral b1 + fromIntegral b2
