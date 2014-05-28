@@ -12,7 +12,7 @@ main :: IO ()
 main = do
   file:_ <- getArgs
   initState' <- load <$> B.readFile file
-  let initState = initState' & options.debug .~ True
+  let initState = initState' & options.debug .~ False
   emu <- runEmulator initState
   let pc = emu^.thePC
   putStrLn $ showHex pc

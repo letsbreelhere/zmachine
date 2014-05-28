@@ -44,7 +44,7 @@ execShortOP b = do
 
 exec0OP opcode = case opcode of
   0x2 {-print-} -> do ws <- getStringWords
-                      liftIO . putStrLn $ decode ws
+                      liftIO . putStr $ decode ws
   0xa {-quit-} -> quit .= True
   _ -> error $ "Got unknown 0OP:" ++ showHex opcode
   where getStringWords = do w <- consumeWord
@@ -72,6 +72,8 @@ doVAROP opcode args = case opcode of
   0x0 {-call_vs-} -> do let values = map readType args
                         callRoutine (head values) (tail values)
                         return ()
+  0x6 {-print_num-} -> do let val = head args
+                          liftIO . putStr . show $ readType val
   _ -> error $ "Got unknown VAROP " ++ showHex opcode ++ " with arguments " ++ show args
 
 callRoutine :: Word -> [Word] -> Emulator Word
