@@ -26,7 +26,7 @@ execShortOP b = case b of
 
 execVAROP :: Byte -> Emulator ()
 execVAROP b = do
-  let opcode = b .&. (2^5 - 1)
+  let opcode = b .&. (bit 5 - 1)
   args <- parseTypeByte =<< consumeByte
   doVAROP opcode args
 
