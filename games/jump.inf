@@ -1,0 +1,7 @@
+[ Main;
+  print "I'm here!^";
+  jump Foo;
+  print "I can't be here!^";
+  .Foo;
+  @quit;
+];
