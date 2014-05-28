@@ -27,4 +27,4 @@ load bstr = EmuState newCallStack
                      newMemory
   where newMemory = fromByteString bstr
         newCallStack = stackFrame :# []
-        stackFrame = newStackFrame (fromIntegral $ byteAt 0x6 newMemory)
+        stackFrame = newStackFrame (fromIntegral $ wordAt 0x6 newMemory)
