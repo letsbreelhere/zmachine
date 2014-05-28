@@ -26,10 +26,11 @@ exec2OP b = case b of
 execShortOP :: Byte -> Emulator ()
 execShortOP b = do
   let opcode = b .&. (bit 4 - 1)
-  t <- lookupType (testBit b 6, testBit b 7)
+  t <- lookupType (testBit b 5, testBit b 4)
   maybe (exec0OP opcode) (exec1OP opcode) t
 
 exec0OP opcode = case opcode of
+  0xa -> quit .= True
   _ -> error $ "Got unknown 0OP:" ++ showHex opcode
 
 exec1OP opcode t = case opcode of
@@ -59,5 +60,6 @@ callRoutine routine args = do
   return ret
   where execLoop = do instr <- consumeByte
                       exec instr
-                      done <- use $ curFrame.returnValue.to isJust
-                      when (not done) execLoop
+                      shouldReturn <- use $ curFrame.returnValue.to isJust
+                      hasQuit <- use quit
+                      when (not $ shouldReturn || hasQuit) execLoop
