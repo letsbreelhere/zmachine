@@ -24,8 +24,16 @@ exec2OP b = case b of
   _ -> error $ "Got unknown 2OP " ++ showHex b
 
 execShortOP :: Byte -> Emulator ()
-execShortOP b = case b of
-  _ -> error $ "Got unknown short op " ++ showHex b
+execShortOP b = do
+  let opcode = b .&. (bit 4 - 1)
+  t <- lookupType (testBit b 6, testBit b 7)
+  maybe (exec0OP opcode) (exec1OP opcode) t
+
+exec0OP opcode = case opcode of
+  _ -> error $ "Got unknown 0OP:" ++ showHex opcode
+
+exec1OP opcode t = case opcode of
+  _ -> error $ "Got unknown 1OP:" ++ showHex opcode ++ " with argument " ++ show t
 
 execVAROP :: Byte -> Emulator ()
 execVAROP b = do

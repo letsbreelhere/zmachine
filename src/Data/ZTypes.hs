@@ -1,5 +1,6 @@
 module Data.ZTypes ( ZType(..)
                    , parseTypeByte
+                   , lookupType
                    , readType
                    ) where
 
