@@ -4,6 +4,8 @@ module Data.ZTypes ( ZType(..)
                    , readType
                    ) where
 
+import Control.Lens
+import Data.CallStack
 import Data.Maybe
 import Data.Memory
 import Data.Bits
@@ -20,7 +22,11 @@ instance Show ZType where
   show (ZVar var val) = "ZVar "  ++ showHex var ++ " " ++ showHex val
 
 getVar :: Byte -> Emulator Word
-getVar n = error "getVar"
+getVar n
+  | n == 0 = error "Pull from local stack"
+  | n < 16 = do locals <- use (curFrame.localVars)
+                return $ locals !! fromIntegral (n-1)
+  | otherwise = error $ "Global var " ++ show n
 
 readType :: ZType -> Word
 readType t = case t of

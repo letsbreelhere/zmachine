@@ -37,7 +37,7 @@ load bstr = EmuState newCallStack
                      defaultOptions
   where newMemory = fromByteString bstr
         newCallStack = stackFrame :# []
-        stackFrame = newStackFrame (fromIntegral $ wordAt 0x6 newMemory)
+        stackFrame = newStackFrame (fromIntegral $ wordAt 0x6 newMemory) []
 
 peekByteAt :: (Integral a) => a -> Emulator Byte
 peekByteAt i = use $ memory.to (byteAt $ fromIntegral i)

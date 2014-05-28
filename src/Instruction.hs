@@ -28,8 +28,9 @@ exec2OP b = do let opcode = b .&. (bit 5 - 1)
                x <- lookupAbbrevType varType1
                y <- lookupAbbrevType varType2
                do2OP opcode x y
-  where lookupAbbrevType True  = lookupType (False, True)
-        lookupAbbrevType False = lookupType (True, False)
+  where lookupAbbrevType p  = if p
+          then fmap fromJust . lookupType $ (True, False)
+          else fmap fromJust . lookupType $ (False, True)
 
 do2OP opcode x y = case opcode of
   _ -> error $ "Got unknown 2OP:" ++ showHex opcode ++ " with args " ++ show x ++ ", " ++ show y
@@ -75,7 +76,9 @@ doVAROP opcode args = case opcode of
 callRoutine :: Word -> [Word] -> Emulator Word
 callRoutine routine args = do
   let raddr = 4 * fromIntegral routine
-      newFrame = newStackFrame (raddr + 1)
+  numLocals <- fmap fromIntegral (peekByteAt raddr)
+  let locals = replicate numLocals 0
+      newFrame = newStackFrame (raddr + 1) locals
   D.log $ "Executing routine at " ++ showHex raddr
   callStack %= push newFrame
   execLoop

@@ -2,6 +2,7 @@
 
 module Data.CallStack ( StackFrame
                       , pc
+                      , localVars
                       , returnValue
                       , newStackFrame
                       , CallStack
@@ -38,12 +39,13 @@ discard (_ :# []) = error "Tried to make an empty NEList!"
 discard (_ :# (sf:sfs)) = sf :# sfs
 
 data StackFrame = StackFrame { _pc :: Int
+                             , _localVars :: [Word]
                              , _returnValue :: Maybe Word
                              }
 
 makeLenses ''StackFrame
 
-newStackFrame :: Int -> StackFrame
-newStackFrame pc = StackFrame pc Nothing
+newStackFrame :: Int -> [Word] -> StackFrame
+newStackFrame pc xs = StackFrame pc xs Nothing
 
 type CallStack = NEList StackFrame
