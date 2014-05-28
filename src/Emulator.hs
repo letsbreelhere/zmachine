@@ -2,6 +2,7 @@
 
 module Emulator where
 
+import Control.Applicative ((<*))
 import Control.Lens
 import Control.Monad.State
 import Data.Memory
@@ -28,3 +29,19 @@ load bstr = EmuState newCallStack
   where newMemory = fromByteString bstr
         newCallStack = stackFrame :# []
         stackFrame = newStackFrame (fromIntegral $ wordAt 0x6 newMemory)
+
+peekByte :: Emulator Byte
+peekByte = do
+  pc <- use thePC
+  use $ memory.to (byteAt pc)
+
+consumeByte :: Emulator Byte
+consumeByte = peekByte <* (thePC += 1)
+
+peekWord :: Emulator Word
+peekWord = do
+  pc <- use thePC
+  use $ memory.to (wordAt pc)
+
+consumeWord :: Emulator Word
+consumeWord = peekWord <* (thePC += 2)
