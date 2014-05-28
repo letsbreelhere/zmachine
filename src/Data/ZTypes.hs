@@ -3,6 +3,7 @@ module Data.ZTypes ( ZType(..)
                    , readType
                    ) where
 
+import Data.Maybe
 import Data.Memory
 import Data.Bits
 import Emulator
@@ -26,16 +27,16 @@ readType t = case t of
   ZByte b    -> fromIntegral b
   ZVar _ val -> val
 
-lookupType :: (Bool,Bool) -> Emulator ZType
+lookupType :: (Bool,Bool) -> Emulator (Maybe ZType)
 lookupType pair = case pair of
-  (False, False) -> fmap ZWord consumeWord
-  (False,  True) -> fmap ZByte consumeByte
+  (False, False) -> fmap (Just . ZWord) consumeWord
+  (False,  True) -> fmap (Just . ZByte) consumeByte
   (True,  False) -> do var <- consumeByte
                        val <- getVar var
-                       return  $ ZVar var val
-  _              -> error "Got type bits %11!"
+                       return . Just $ ZVar var val
+  _              -> return Nothing
 
 parseTypeByte :: Byte -> Emulator [ZType]
 parseTypeByte b = let topTwoBits b' = (testBit b' 7, testBit b' 6)
                       bitPairs = takeWhile (/= (True,True)) . map topTwoBits . take 4 $ iterate (`shiftL` 2) b
-                  in mapM lookupType bitPairs
+                  in fmap (map fromJust) . mapM lookupType $ bitPairs
