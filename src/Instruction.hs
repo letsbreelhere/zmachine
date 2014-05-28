@@ -42,7 +42,13 @@ exec0OP opcode = case opcode of
                               else do ws <- getStringWords
                                       return (w:ws)
 
+exec1OP :: Byte -> ZType -> Emulator ()
 exec1OP opcode t = case opcode of
+  0xc {-jump-} -> do let (ZWord label) = t
+                     p <- use thePC
+                     D.log $ "PC is " ++ showHex p
+                     D.log $ "Jumping to " ++ show (signedWord label)
+                     thePC += signedWord label - 2
   _ -> error $ "Got unknown 1OP:" ++ showHex opcode ++ " with argument " ++ show t
 
 execVAROP :: Byte -> Emulator ()
