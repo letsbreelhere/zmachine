@@ -1,5 +1,6 @@
 module Instruction (exec) where
 
+import Control.Monad.State
 import Control.Monad
 import Control.Lens
 import Data.Memory
@@ -10,6 +11,7 @@ import qualified Debug as D
 import Data.Bits
 import Data.ZTypes
 import Data.CallStack
+import Zscii
 
 exec :: Byte -> Emulator ()
 exec b = do
@@ -30,8 +32,15 @@ execShortOP b = do
   maybe (exec0OP opcode) (exec1OP opcode) t
 
 exec0OP opcode = case opcode of
-  0xa -> quit .= True
+  0x2 {-print-} -> do ws <- getStringWords
+                      liftIO . putStrLn $ decode ws
+  0xa {-quit-} -> quit .= True
   _ -> error $ "Got unknown 0OP:" ++ showHex opcode
+  where getStringWords = do w <- consumeWord
+                            if testBit w 15
+                              then return [w]
+                              else do ws <- getStringWords
+                                      return (w:ws)
 
 exec1OP opcode t = case opcode of
   _ -> error $ "Got unknown 1OP:" ++ showHex opcode ++ " with argument " ++ show t
