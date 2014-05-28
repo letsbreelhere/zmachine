@@ -1,0 +1,4 @@
+[Main x;
+  x = 42;
+  print "The answer is is ", x, ".^";
+];
