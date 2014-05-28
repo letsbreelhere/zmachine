@@ -13,6 +13,7 @@ module Data.CallStack ( StackFrame
                       , NEList(..)
                       ) where
 
+import Data.Array
 import Control.Lens
 import Data.Word (Word8,Word16)
 
@@ -39,13 +40,13 @@ discard (_ :# []) = error "Tried to make an empty NEList!"
 discard (_ :# (sf:sfs)) = sf :# sfs
 
 data StackFrame = StackFrame { _pc :: Int
-                             , _localVars :: [Word]
+                             , _localVars :: Array Byte Word
                              , _returnValue :: Maybe Word
                              }
 
 makeLenses ''StackFrame
 
 newStackFrame :: Int -> [Word] -> StackFrame
-newStackFrame pc xs = StackFrame pc xs Nothing
+newStackFrame pc xs = StackFrame pc (listArray (0, fromIntegral $ length xs) xs) Nothing
 
 type CallStack = NEList StackFrame

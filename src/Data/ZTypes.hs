@@ -2,6 +2,9 @@ module Data.ZTypes ( ZType(..)
                    , parseTypeByte
                    , lookupType
                    , readType
+                   , getVar
+                   , setVar
+                   , setVarType
                    ) where
 
 import Control.Lens
@@ -11,6 +14,7 @@ import Data.Memory
 import Data.Bits
 import Emulator
 import Util
+import Data.Array ((!), (//))
 
 data ZType = ZWord Word
            | ZByte Byte
@@ -25,8 +29,19 @@ getVar :: Byte -> Emulator Word
 getVar n
   | n == 0 = error "Pull from local stack"
   | n < 16 = do locals <- use (curFrame.localVars)
-                return $ locals !! fromIntegral (n-1)
+                return $ locals ! (n-1)
   | otherwise = error $ "Global var " ++ show n
+
+setVarType :: ZType -> ZType -> Emulator ()
+setVarType x y = do let xval = readType x
+                        yval = readType y
+                    setVar (fromIntegral xval) yval
+
+setVar :: Byte -> Word -> Emulator ()
+setVar n v
+  | n == 0 = error "Push to local stack"
+  | n < 16 = curFrame.localVars %= (// [(n-1, v)])
+  | otherwise = error $ "Write global var " ++ show n
 
 readType :: ZType -> Word
 readType t = case t of

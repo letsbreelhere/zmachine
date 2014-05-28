@@ -33,6 +33,7 @@ exec2OP b = do let opcode = b .&. (bit 5 - 1)
           else fmap fromJust . lookupType $ (False, True)
 
 do2OP opcode x y = case opcode of
+  0xd {-store-} -> setVarType x y
   _ -> error $ "Got unknown 2OP:" ++ showHex opcode ++ " with args " ++ show x ++ ", " ++ show y
 
 execShortOP :: Byte -> Emulator ()
