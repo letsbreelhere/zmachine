@@ -22,8 +22,17 @@ exec b = do
     (True,  True) -> execVAROP   b
 
 exec2OP :: Byte -> Emulator ()
-exec2OP b = case b of
-  _ -> error $ "Got unknown 2OP " ++ showHex b
+exec2OP b = do let opcode = b .&. (bit 5 - 1)
+                   varType1 = testBit b 6
+                   varType2 = testBit b 5
+               x <- lookupAbbrevType varType1
+               y <- lookupAbbrevType varType2
+               do2OP opcode x y
+  where lookupAbbrevType True  = lookupType (False, True)
+        lookupAbbrevType False = lookupType (True, False)
+
+do2OP opcode x y = case opcode of
+  _ -> error $ "Got unknown 2OP:" ++ showHex opcode ++ " with args " ++ show x ++ ", " ++ show y
 
 execShortOP :: Byte -> Emulator ()
 execShortOP b = do
