@@ -1,5 +1,4 @@
 [ Main;
-    print "Hello, World!^";
-    "Okay, so I forgot to do the world part, so what?^";
+  @print "Hello, world!^";
+  @quit;
 ];
-
