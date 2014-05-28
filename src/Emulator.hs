@@ -39,18 +39,21 @@ load bstr = EmuState newCallStack
         newCallStack = stackFrame :# []
         stackFrame = newStackFrame (fromIntegral $ wordAt 0x6 newMemory)
 
+peekByteAt :: (Integral a) => a -> Emulator Byte
+peekByteAt i = use $ memory.to (byteAt $ fromIntegral i)
+
 peekByte :: Emulator Byte
-peekByte = do
-  pc <- use thePC
-  use $ memory.to (byteAt pc)
+peekByte = use thePC >>= peekByteAt
 
 consumeByte :: Emulator Byte
 consumeByte = peekByte <* (thePC += 1)
 
+peekWordAt :: (Integral a) => a -> Emulator Word
+peekWordAt i = use $ memory.to (wordAt $ fromIntegral i)
+
 peekWord :: Emulator Word
 peekWord = do
-  pc <- use thePC
-  use $ memory.to (wordAt pc)
+  use thePC >>= peekWordAt
 
 consumeWord :: Emulator Word
 consumeWord = peekWord <* (thePC += 2)
