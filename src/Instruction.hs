@@ -21,5 +21,10 @@ exec2OP b = case b of
 execShortOP b = case b of
   _ -> error $ "Got unknown short op " ++ showHex b
 
-execVAROP b = case b of
-  _ -> error $ "Got unknown VAROP " ++ showHex b
+execVAROP b = do
+  let opcode = b .&. (2^5 - 1)
+  typeByte <- consumeByte
+  doVAROP opcode []
+
+doVAROP opcode args = case opcode of
+  _ -> error $ "Got unknown VAROP " ++ showHex opcode ++ " with arguments " ++ show (map showHex args)
