@@ -34,6 +34,7 @@ exec2OP b = do let opcode = b .&. (bit 5 - 1)
 
 do2OP opcode x y = case opcode of
   0x2 {-jl-} -> getLabel >>= jumpWith (readType x < readType y)
+  0x3 {-jg-} -> getLabel >>= jumpWith (readType x > readType y)
   0xd {-store-} -> setVarType x y
   _ -> error $ "Got unknown 2OP:" ++ showHex opcode ++ " with args " ++ show x ++ ", " ++ show y
 

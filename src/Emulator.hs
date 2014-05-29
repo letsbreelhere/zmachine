@@ -5,6 +5,7 @@ module Emulator where
 import Control.Applicative ((<*))
 import Control.Lens
 import Control.Monad.State
+import Data.Array
 import Data.Memory
 import Data.CallStack
 import qualified Data.ByteString as B
@@ -13,10 +14,11 @@ data EmuOptions = EmuOptions { _debug :: Bool
                              }
 makeLenses ''EmuOptions
 
-data EmuState = EmuState { _callStack :: CallStack
-                         , _memory    :: Memory
-                         , _quit      :: Bool
-                         , _options   :: EmuOptions
+data EmuState = EmuState { _callStack  :: CallStack
+                         , _memory     :: Memory
+                         , _globalVars :: Array Byte Word
+                         , _quit       :: Bool
+                         , _options    :: EmuOptions
                          }
 makeLenses ''EmuState
 
@@ -33,11 +35,13 @@ type Emulator a = StateT EmuState IO a
 load :: B.ByteString -> EmuState
 load bstr = EmuState newCallStack
                      newMemory
+                     newGlobals
                      False
                      defaultOptions
   where newMemory = fromByteString bstr
         newCallStack = stackFrame :# []
         stackFrame = newStackFrame (fromIntegral $ wordAt 0x6 newMemory) []
+        newGlobals = listArray (0,239) $ repeat 0
 
 peekByteAt :: (Integral a) => a -> Emulator Byte
 peekByteAt i = use $ memory.to (byteAt $ fromIntegral i)
