@@ -94,7 +94,6 @@ exec1OP opcode t = case opcode of
                      D.log $ "PC is " ++ showHex p
                      D.log $ "Jumping to " ++ show (signedWord label)
                      thePC += signedWord label - 2
-  0xa {-print_obj-} -> liftIO . putStr $ "Towel"
   0xd {-print_paddr-} -> do let ZWord packed = t
                                 stringAddr = unpackAddress packed
                             origPC <- use thePC
