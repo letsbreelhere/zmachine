@@ -33,8 +33,10 @@ exec2OP b = do let opcode = b .&. (bit 5 - 1)
           else fmap fromJust . lookupType $ (False, True)
 
 do2OP opcode x y = case opcode of
+  0x1 {-je-} -> getLabel >>= jumpWith (readType x /= readType y)
   0x2 {-jl-} -> getLabel >>= jumpWith (readType x < readType y)
   0x3 {-jg-} -> getLabel >>= jumpWith (readType x > readType y)
+  0xb {-set_attr-} -> D.log "Skipping"
   0xd {-store-} -> setVarType x y
   _ -> error $ "Got unknown 2OP:" ++ showHex opcode ++ " with args " ++ show x ++ ", " ++ show y
 
@@ -53,8 +55,10 @@ getZString = do ws <- getStringWords
                                       return (w:ws)
 
 exec0OP opcode = case opcode of
+  0x0 {-rtrue-} -> returnWith 1
   0x2 {-print-} -> getZString >>= liftIO . putStr
   0xa {-quit-} -> quit .= True
+  0xb {-new_line-} -> liftIO $ putStr "\n"
   _ -> error $ "Got unknown 0OP:" ++ showHex opcode
 
 getLabel :: Emulator (Int, Bool)
@@ -86,6 +90,7 @@ exec1OP opcode t = case opcode of
                      D.log $ "PC is " ++ showHex p
                      D.log $ "Jumping to " ++ show (signedWord label)
                      thePC += signedWord label - 2
+  0xa {-print_obj-} -> liftIO . putStr $ "Towel"
   0xd {-print_paddr-} -> do let ZWord packed = t
                                 stringAddr = unpackAddress packed
                             origPC <- use thePC
@@ -108,6 +113,9 @@ doVAROP opcode args = case opcode of
                         return ()
   0x6 {-print_num-} -> do let val = head args
                           liftIO . putStr . show $ readType val
+  0x19 {-call_vn-} -> do let values = map readType args
+                         _ <- callRoutine (head values) (tail values)
+                         return ()
   _ -> error $ "Got unknown VAROP " ++ showHex opcode ++ " with arguments " ++ show args
 
 callRoutine :: Word -> [Word] -> Emulator Word
