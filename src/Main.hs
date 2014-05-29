@@ -12,6 +12,6 @@ main :: IO ()
 main = do
   file:_ <- getArgs
   initState' <- load <$> B.readFile file
-  let initState = initState' & options.debug .~ False
+  let initState = initState' & options.debug .~ True
   _ <- runEmulator initState
   return ()

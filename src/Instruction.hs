@@ -33,6 +33,7 @@ exec2OP b = do let opcode = b .&. (bit 5 - 1)
           else fmap fromJust . lookupType $ (False, True)
 
 do2OP opcode x y = case opcode of
+  0x2 {-jl-} -> getLabel >>= jumpWith (readType x < readType y)
   0xd {-store-} -> setVarType x y
   _ -> error $ "Got unknown 2OP:" ++ showHex opcode ++ " with args " ++ show x ++ ", " ++ show y
 
@@ -55,8 +56,27 @@ exec0OP opcode = case opcode of
   0xa {-quit-} -> quit .= True
   _ -> error $ "Got unknown 0OP:" ++ showHex opcode
 
+getLabel :: Emulator (Int, Bool)
+getLabel = do b <- consumeByte
+              let backwards = testBit b 7
+                  done = testBit b 6
+              if done
+                then return (fromIntegral $ b .&. (bit 5 - 1), backwards)
+                else do b' <- consumeByte
+                        let w = word b b'
+                        return (signAtBit 13 w, backwards)
+
+
+jumpWith :: Bool -> (Int, Bool) -> Emulator ()
+jumpWith predicate (label, backwards) = do let shouldJump = if backwards
+                                                              then not predicate
+                                                              else predicate
+                                           when shouldJump (thePC += label - 2)
+
 exec1OP :: Byte -> ZType -> Emulator ()
 exec1OP opcode t = case opcode of
+  0x0 {-jz-} -> do let val = readType t
+                   getLabel >>= jumpWith (val == 0)
   0xc {-jump-} -> do let (ZWord label) = t
                      p <- use thePC
                      D.log $ "PC is " ++ showHex p
