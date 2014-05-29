@@ -1,3 +1,4 @@
+Property softness;
 Object Towel
   with
     softness 9;
