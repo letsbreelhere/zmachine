@@ -78,7 +78,7 @@ execVAROP b = do
 
 doVAROP opcode args = case opcode of
   0x0 {-call_vs-} -> do let values = map readType args
-                        callRoutine (head values) (tail values)
+                        res <- callRoutine (head values) (tail values)
                         return ()
   0x6 {-print_num-} -> do let val = head args
                           liftIO . putStr . show $ readType val
@@ -90,7 +90,7 @@ callRoutine routine args = do
   numLocals <- fmap fromIntegral (peekByteAt raddr)
   let locals = replicate numLocals 0
       newFrame = newStackFrame (raddr + 1) locals
-  D.log $ "Executing routine at " ++ showHex raddr
+  D.log $ "Executing routine at " ++ showHex raddr ++ " with " ++ show args
   callStack %= push newFrame
   execLoop
   ret <- use $ curFrame.returnValue.to fromJust
