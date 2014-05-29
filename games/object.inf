@@ -5,8 +5,7 @@ Object Towel
     softness 20;
 
 [Main x;
-  @get_prop Towel softness -> x;
-  print x;
+  print Towel.softness;
   @new_line;
   @quit;
 ];

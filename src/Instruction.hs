@@ -27,22 +27,33 @@ exec2OP b = do let opcode = b .&. (bit 5 - 1)
                    varType2 = testBit b 5
                x <- lookupAbbrevType varType1
                y <- lookupAbbrevType varType2
-               D.log $ "Executing 2OP:" ++ showHex opcode ++ " with args " ++ show (x,y)
                do2OP opcode x y
   where lookupAbbrevType p  = if p
           then fmap fromJust . lookupType $ (True, False)
           else fmap fromJust . lookupType $ (False, True)
 
-do2OP opcode x y = case opcode of
-  0x1 {-je-} -> getLabel >>= jumpWith (readType x == readType y)
-  0x2 {-jl-} -> getLabel >>= jumpWith (readType x < readType y)
-  0x3 {-jg-} -> getLabel >>= jumpWith (readType x > readType y)
-  0xd {-store-} -> setVarType x y
-  0x11 {-get_prop-} -> do obj <- object (readType x)
-                          Just p <- propertyWord obj (fromIntegral $ readType y)
-                          setResult p
-  0x14 {-add-} -> setResult (readType x + readType y)
-  _ -> error $ "Got unknown 2OP:" ++ showHex opcode ++ " with args " ++ show x ++ ", " ++ show y
+do2OP opcode x y = do
+  D.log $ "Executing 2OP:" ++ showHex opcode ++ " with args " ++ show (x,y)
+  case opcode of
+    0x1 {-je-} -> getLabel >>= jumpWith (readType x == readType y)
+    0x2 {-jl-} -> getLabel >>= jumpWith (readType x < readType y)
+    0x3 {-jg-} -> getLabel >>= jumpWith (readType x > readType y)
+    0x4 {-dec_chk-} -> do l <- getLabel
+                          curVar <- getVar (fromIntegral $ readType x)
+                          setVar (fromIntegral $ readType x) (curVar - 1)
+                          jumpWith (curVar - 1 < readType y) l
+    0xd {-store-} -> setVarType x y
+    0x11 {-get_prop-} -> do obj <- object (readType x)
+                            Just p <- propertyWord obj (fromIntegral $ readType y)
+                            setResult p
+    0x12 {-get_prop_addr-} -> do obj <- object (readType x)
+                                 p <- property obj (fromIntegral $ readType y)
+                                 setResult $ maybe 0 (fromIntegral . (^.propAddr)) p
+    0x14 {-add-} -> setResult (readType x + readType y)
+    0x15 {-sub-} -> setResult (readType x - readType y)
+    0x19 {-call_2s-} -> do res <- callRoutine (readType x) [readType y]
+                           setResult res
+    _ -> error $ "Got unknown 2OP:" ++ showHex opcode ++ " with args " ++ show x ++ ", " ++ show y
 
 execShortOP :: Byte -> Emulator ()
 execShortOP b = do
@@ -93,6 +104,11 @@ exec1OP :: Byte -> ZType -> Emulator ()
 exec1OP opcode t = D.log ("Executing 1OP:" ++ showHex opcode ++ " with arg " ++ show t) >> case opcode of
   0x0 {-jz-} -> do let val = readType t
                    getLabel >>= jumpWith (val == 0)
+  0x4 {-get_prop_len-} -> withTmpPC (fromIntegral $ readType t) $ do
+                            mp <- consumeProperty
+                            setResult $ case mp of
+                              Nothing -> 0
+                              Just p  -> fromIntegral . length $ p^.propData
   0xc {-jump-} -> do let (ZWord label) = t
                      p <- use thePC
                      D.log $ "PC is " ++ showHex p
@@ -125,9 +141,11 @@ doVAROP opcode args = case opcode of
                         setResult res
   0x6 {-print_num-} -> do let val = head args
                           liftIO . putStr . show $ readType val
+  0x8 {-push-} -> setVar 0 (readType $ head args)
   0x19 {-call_vn-} -> do let values = map readType args
                          _ <- callRoutine (head values) (tail values)
                          return ()
+  0x1f {-check_arg_count-} -> return () -- XXX
   _ -> error $ "Got unknown VAROP " ++ showHex opcode ++ " with arguments " ++ show args
 
 callRoutine :: Word -> [Word] -> Emulator Word

@@ -26,6 +26,7 @@ makeLenses ''Object
 
 data Property = Property { _num :: Byte
                          , _propData :: [Byte]
+                         , _propAddr :: Int
                          }
   deriving (Show)
 
@@ -59,7 +60,7 @@ propertyDefaults = do tableStart <- fmap fromIntegral . use $ memory.to (wordAt 
                       forM [0..62] $ \i -> do
                         w <- consumeWord
                         let (b1, b2) = bytes w
-                        return $ Property (i+1) [b1,b2]
+                        return $ Property (i+1) [b1,b2] 0
 
 {-
 Each object has a 14-byte entry as follows:
@@ -103,10 +104,13 @@ propertyList obj = withTmpPC (fromIntegral $ obj^.properties) $ do
                              Nothing -> return []
                              Just p' -> (:) <$> pure p' <*> propertyList'
 
+property :: Object -> Int -> Emulator (Maybe Property)
+property obj i = do ps <- propertyList obj
+                    return $ find (\p' -> p'^.num == fromIntegral i) ps
+
 propertyWord :: Object -> Int -> Emulator (Maybe Word)
-propertyWord obj i = do ps <- propertyList obj
-                        let mp = find (\p' -> p'^.num == fromIntegral i) ps
-                            p  = fmap (^.propData) mp
+propertyWord obj i = do mp <- property obj i
+                        let p = fmap (^.propData) mp
                         return $ fmap toPropWord p
   where toPropWord xs = case xs of
           [x]   -> word 0 x
@@ -122,13 +126,14 @@ consumePropertiesHeader = do textLength <- fmap fromIntegral consumeByte
                              replicateM textLength consumeWord
 
 consumeProperty :: Emulator (Maybe Property)
-consumeProperty = do sizeByte <- consumeByte
+consumeProperty = do addr <- use thePC
+                     sizeByte <- consumeByte
                      (propNum, len) <- if testBit sizeByte 7
                                         then twoByteSize sizeByte
                                         else return $ oneByteSize sizeByte
                      if sizeByte == 0
                        then return Nothing
-                       else fmap Just $ Property <$> pure propNum <*> replicateM len consumeByte
+                       else fmap Just $ Property <$> pure propNum <*> replicateM len consumeByte <*> pure addr
   where oneByteSize b = let propNum = b .&. (bit 6 - 1)
                             propLen = if testBit b 6 then 2 else 1
                         in (propNum, propLen)
