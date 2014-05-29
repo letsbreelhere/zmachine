@@ -59,7 +59,7 @@ exec0OP opcode = case opcode of
 
 getLabel :: Emulator (Int, Bool)
 getLabel = do b <- consumeByte
-              let backwards = testBit b 7
+              let backwards = not $ testBit b 7
                   done = testBit b 6
               if done
                 then return (fromIntegral $ b .&. (bit 5 - 1), backwards)
