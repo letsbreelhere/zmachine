@@ -1,6 +1,7 @@
 module Util ( showHex
             , showBin
             , signedWord
+            , signAtBit
             ) where
 
 import qualified Numeric as N
@@ -18,6 +19,10 @@ showBin n = '%' : padTo 8 '0' (N.showIntAtBase 2 intToDigit n "")
   where padTo k c str = replicate (k - length str) c ++ str
 
 signedWord :: Word -> Int
-signedWord w = if testBit w 15
-  then fromIntegral $ w .&. (bit 15 - 1)
-  else fromIntegral $ w - 2^16
+signedWord = signAtBit 15
+
+signAtBit :: (Integral a, Bits a) => Int -> a -> Int
+signAtBit n b = let b' = b .&. (bit (n+1) - 1) in
+  fromIntegral $ if testBit b n
+                   then b' - 2^(n+1)
+                   else b'
