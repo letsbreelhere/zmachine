@@ -30,8 +30,7 @@ getVar n
   | n == 0 = error "Pull from local stack"
   | n < 16 = do locals <- use (curFrame.localVars)
                 return $ locals ! (n-1)
-  | otherwise = do globals <- use globalVars
-                   return $ globals ! (n-16)
+  | otherwise = globalVar (n-16)
 
 setVarType :: ZType -> ZType -> Emulator ()
 setVarType x y = do let xval = readType x

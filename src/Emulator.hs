@@ -16,7 +16,6 @@ makeLenses ''EmuOptions
 
 data EmuState = EmuState { _callStack  :: CallStack
                          , _memory     :: Memory
-                         , _globalVars :: Array Byte Word
                          , _quit       :: Bool
                          , _options    :: EmuOptions
                          }
@@ -35,13 +34,15 @@ type Emulator a = StateT EmuState IO a
 load :: B.ByteString -> EmuState
 load bstr = EmuState newCallStack
                      newMemory
-                     newGlobals
                      False
                      defaultOptions
   where newMemory = fromByteString bstr
         newCallStack = stackFrame :# []
         stackFrame = newStackFrame (fromIntegral $ wordAt 0x6 newMemory) []
-        newGlobals = listArray (0,239) $ repeat 0
+
+globalVar :: Byte -> Emulator Word
+globalVar b = do globalsStart <- use $ memory.to (wordAt 0xc)
+                 use $ memory.to (wordAt $ fromIntegral globalsStart + fromIntegral b)
 
 peekByteAt :: (Integral a) => a -> Emulator Byte
 peekByteAt i = use $ memory.to (byteAt $ fromIntegral i)
