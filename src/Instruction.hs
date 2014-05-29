@@ -103,6 +103,8 @@ execVAROP b = do
 doVAROP opcode args = case opcode of
   0x0 {-call_vs-} -> do let values = map readType args
                         res <- callRoutine (head values) (tail values)
+                        resultVar <- consumeByte
+                        setVar resultVar res
                         return ()
   0x6 {-print_num-} -> do let val = head args
                           liftIO . putStr . show $ readType val
