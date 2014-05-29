@@ -109,9 +109,15 @@ exec1OP opcode t = D.log ("Executing 1OP:" ++ showHex opcode ++ " with arg " ++ 
 execVAROP :: Byte -> Emulator ()
 execVAROP b = do
   let opcode = b .&. (bit 5 - 1)
+      isVAR  = testBit b 5
   args <- parseTypeByte =<< consumeByte
-  D.log ("Executing VAROP:" ++ showHex opcode ++ " with args " ++ show args)
-  doVAROP opcode args
+  if isVAR
+    then do
+      D.log ("Executing VAROP:" ++ showHex opcode ++ " with args " ++ show args)
+      doVAROP opcode args
+    else case args of
+           [x,y] -> do2OP opcode x y
+           _ -> error "Wrong number of arguments supplied to 2OP"
 
 doVAROP opcode args = case opcode of
   0x0 {-call_vs-} -> do let values = map readType args
