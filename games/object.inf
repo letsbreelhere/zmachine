@@ -1,0 +1,6 @@
+Object Towel
+  with
+    softness 9;
+[Main;
+  print "That towel is pretty soft. I'd say it's a ", Towel.softness, " on a scale of 10.^";
+];
