@@ -56,9 +56,10 @@ getZString = do ws <- getStringWords
                               else do ws <- getStringWords
                                       return (w:ws)
 
-exec0OP opcode = case opcode of
+exec0OP opcode = D.log ("Executing 0OP:" ++ showHex opcode) >> case opcode of
   0x0 {-rtrue-} -> returnWith 1
   0x2 {-print-} -> getZString >>= liftIO . putStr
+  0x8 {-ret_popped-} -> getVar 0 >>= returnWith
   0xa {-quit-} -> quit .= True
   0xb {-new_line-} -> liftIO $ putStr "\n"
   _ -> error $ "Got unknown 0OP:" ++ showHex opcode
@@ -125,7 +126,7 @@ callRoutine :: Word -> [Word] -> Emulator Word
 callRoutine routine args = do
   let raddr = unpackAddress routine
   numLocals <- fmap fromIntegral (peekByteAt raddr)
-  let locals = replicate numLocals 0
+  let locals = take numLocals $ args ++ repeat 0
       newFrame = newStackFrame (raddr + 1) locals
   D.log $ "Executing routine at " ++ showHex raddr ++ " with " ++ show args
   callStack %= push newFrame
