@@ -29,7 +29,7 @@ charLookup alphabet i = table `atMay` (i-6)
                   AP -> "^\n0123456789.,!?_#'\"/\\-:()"
 
 alphaChange :: Alphabet -> Int -> Alphabet
-alphaChange a i = toEnum (fromEnum a + i `mod` 3)
+alphaChange a i = toEnum $ (fromEnum a + i) `mod` 3
 
 maskWord :: Word16 -> [Int]
 maskWord w = [mask 1 5 w, mask 6 5 w, mask 11 5 w]

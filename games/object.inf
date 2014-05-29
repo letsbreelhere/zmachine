@@ -2,7 +2,7 @@ Property softness;
 
 Object Towel
   with
-    softness 42;
+    softness 20;
 
 [Main x;
   @get_prop Towel softness -> x;

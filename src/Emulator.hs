@@ -67,3 +67,11 @@ peekWord = do
 
 consumeWord :: Emulator Word
 consumeWord = peekWord <* (thePC += 2)
+
+withTmpPC :: Int -> Emulator a -> Emulator a
+withTmpPC p action = do oldPC <- use thePC
+                        thePC .= p
+                        res <- action
+                        thePC .= oldPC
+                        return res
+

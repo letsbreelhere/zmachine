@@ -5,6 +5,7 @@ import Control.Monad
 import Control.Lens
 import Data.Memory
 import Data.Maybe
+import Data.Object
 import Emulator
 import Util
 import qualified Debug as D
@@ -15,7 +16,6 @@ import Zscii
 
 exec :: Byte -> Emulator ()
 exec b = do
-  D.log $ "Executing " ++ showBin b
   case (testBit b 7, testBit b 6) of
     (False,    _) -> exec2OP     b
     (True, False) -> execShortOP b
@@ -27,6 +27,7 @@ exec2OP b = do let opcode = b .&. (bit 5 - 1)
                    varType2 = testBit b 5
                x <- lookupAbbrevType varType1
                y <- lookupAbbrevType varType2
+               D.log $ "Executing 2OP:" ++ showHex opcode ++ " with args " ++ show (x,y)
                do2OP opcode x y
   where lookupAbbrevType p  = if p
           then fmap fromJust . lookupType $ (True, False)
@@ -37,6 +38,10 @@ do2OP opcode x y = case opcode of
   0x2 {-jl-} -> getLabel >>= jumpWith (readType x < readType y)
   0x3 {-jg-} -> getLabel >>= jumpWith (readType x > readType y)
   0xd {-store-} -> setVarType x y
+  0x11 {-get_prop-} -> do obj <- object (readType x)
+                          Just p <- propertyWord obj (fromIntegral $ readType y)
+                          resultVar <- consumeByte
+                          setVar resultVar p
   0x14 {-add-} -> do let sum = readType x + readType y
                      resultVar <- consumeByte
                      setVar resultVar sum
@@ -72,7 +77,6 @@ getLabel = do b <- consumeByte
                 then return (fromIntegral $ b .&. (bit 5 - 1), backwards)
                 else do b' <- consumeByte
                         let w = word b b'
-                        D.log (show $ signAtBit 13 w)
                         return (signAtBit 13 w, backwards)
 
 
@@ -83,11 +87,13 @@ jumpWith predicate (label, backwards) = do let shouldJump = if backwards
                                            case label of
                                              0 -> returnWith 0
                                              1 -> returnWith 1
-                                             _ -> when shouldJump (do D.log $ "Attempting jump to " ++ show label
-                                                                      thePC += label - 2)
+                                             _ -> when shouldJump $ do p <- use thePC
+                                                                       D.log $ "PC is " ++ showHex p
+                                                                       D.log $ "Attempting jump to " ++ showHex (p + label - 2)
+                                                                       thePC += label - 2
 
 exec1OP :: Byte -> ZType -> Emulator ()
-exec1OP opcode t = case opcode of
+exec1OP opcode t = D.log ("Executing 1OP:" ++ showHex opcode ++ " with arg " ++ show t) >> case opcode of
   0x0 {-jz-} -> do let val = readType t
                    getLabel >>= jumpWith (val == 0)
   0xc {-jump-} -> do let (ZWord label) = t
@@ -107,6 +113,7 @@ execVAROP :: Byte -> Emulator ()
 execVAROP b = do
   let opcode = b .&. (bit 5 - 1)
   args <- parseTypeByte =<< consumeByte
+  D.log ("Executing VAROP:" ++ showHex opcode ++ " with args " ++ show args)
   doVAROP opcode args
 
 doVAROP opcode args = case opcode of
@@ -114,7 +121,6 @@ doVAROP opcode args = case opcode of
                         res <- callRoutine (head values) (tail values)
                         resultVar <- consumeByte
                         setVar resultVar res
-                        return ()
   0x6 {-print_num-} -> do let val = head args
                           liftIO . putStr . show $ readType val
   0x19 {-call_vn-} -> do let values = map readType args
@@ -141,4 +147,5 @@ callRoutine routine args = do
                       when (not $ shouldReturn || hasQuit) execLoop
 
 returnWith :: Word -> Emulator ()
-returnWith = (curFrame.returnValue.=) . Just
+returnWith v = do D.log $ "Returning " ++ showHex v
+                  curFrame.returnValue .= Just v
