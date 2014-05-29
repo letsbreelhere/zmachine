@@ -33,10 +33,9 @@ exec2OP b = do let opcode = b .&. (bit 5 - 1)
           else fmap fromJust . lookupType $ (False, True)
 
 do2OP opcode x y = case opcode of
-  0x1 {-je-} -> getLabel >>= jumpWith (readType x /= readType y)
+  0x1 {-je-} -> getLabel >>= jumpWith (readType x == readType y)
   0x2 {-jl-} -> getLabel >>= jumpWith (readType x < readType y)
   0x3 {-jg-} -> getLabel >>= jumpWith (readType x > readType y)
-  0xb {-set_attr-} -> D.log "Skipping"
   0xd {-store-} -> setVarType x y
   0x14 {-add-} -> do let sum = readType x + readType y
                      resultVar <- consumeByte
@@ -72,6 +71,7 @@ getLabel = do b <- consumeByte
                 then return (fromIntegral $ b .&. (bit 5 - 1), backwards)
                 else do b' <- consumeByte
                         let w = word b b'
+                        D.log (show $ signAtBit 13 w)
                         return (signAtBit 13 w, backwards)
 
 
@@ -82,7 +82,8 @@ jumpWith predicate (label, backwards) = do let shouldJump = if backwards
                                            case label of
                                              0 -> returnWith 0
                                              1 -> returnWith 1
-                                             _ -> when shouldJump (thePC += label - 2)
+                                             _ -> when shouldJump (do D.log $ "Attempting jump to " ++ show label
+                                                                      thePC += label - 2)
 
 exec1OP :: Byte -> ZType -> Emulator ()
 exec1OP opcode t = case opcode of

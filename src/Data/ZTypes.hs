@@ -8,6 +8,7 @@ module Data.ZTypes ( ZType(..)
                    ) where
 
 import Control.Lens
+import Control.Monad
 import Data.CallStack
 import Data.Maybe
 import Data.Memory
@@ -27,7 +28,11 @@ instance Show ZType where
 
 getVar :: Byte -> Emulator Word
 getVar n
-  | n == 0 = error "Pull from local stack"
+  | n == 0 = do stack <- use $ curFrame.localStack
+                when (null stack) $ error "Tried to pull from an empty stack!"
+                let v = head stack
+                curFrame.localStack %= tail
+                return v
   | n < 16 = do locals <- use (curFrame.localVars)
                 return $ locals ! (n-1)
   | otherwise = globalVar (n-16)
@@ -39,9 +44,9 @@ setVarType x y = do let xval = readType x
 
 setVar :: Byte -> Word -> Emulator ()
 setVar n v
-  | n == 0 = error "Push to local stack"
+  | n == 0 = curFrame.localStack %= (v:)
   | n < 16 = curFrame.localVars %= (// [(n-1, v)])
-  | otherwise = error $ "Write global var " ++ show n
+  | otherwise = setGlobalVar (n-16) v
 
 readType :: ZType -> Word
 readType t = case t of

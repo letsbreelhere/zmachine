@@ -4,6 +4,7 @@ module Data.CallStack ( StackFrame
                       , pc
                       , localVars
                       , returnValue
+                      , localStack
                       , newStackFrame
                       , CallStack
                       , top
@@ -41,12 +42,13 @@ discard (_ :# (sf:sfs)) = sf :# sfs
 
 data StackFrame = StackFrame { _pc :: Int
                              , _localVars :: Array Byte Word
+                             , _localStack :: [Word]
                              , _returnValue :: Maybe Word
                              }
 
 makeLenses ''StackFrame
 
 newStackFrame :: Int -> [Word] -> StackFrame
-newStackFrame pc xs = StackFrame pc (listArray (0, fromIntegral $ length xs) xs) Nothing
+newStackFrame pc xs = StackFrame pc (listArray (0, fromIntegral $ length xs) xs) [] Nothing
 
 type CallStack = NEList StackFrame

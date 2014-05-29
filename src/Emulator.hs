@@ -44,6 +44,11 @@ globalVar :: Byte -> Emulator Word
 globalVar b = do globalsStart <- use $ memory.to (wordAt 0xc)
                  use $ memory.to (wordAt $ fromIntegral globalsStart + fromIntegral b)
 
+setGlobalVar :: Byte -> Word -> Emulator ()
+setGlobalVar b w = do globalsStart <- use $ memory.to (wordAt 0xc)
+                      let varAddr = fromIntegral globalsStart + fromIntegral b
+                      memory %= writeWord varAddr w
+
 peekByteAt :: (Integral a) => a -> Emulator Byte
 peekByteAt i = use $ memory.to (byteAt $ fromIntegral i)
 
