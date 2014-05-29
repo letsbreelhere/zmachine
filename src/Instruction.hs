@@ -40,11 +40,8 @@ do2OP opcode x y = case opcode of
   0xd {-store-} -> setVarType x y
   0x11 {-get_prop-} -> do obj <- object (readType x)
                           Just p <- propertyWord obj (fromIntegral $ readType y)
-                          resultVar <- consumeByte
-                          setVar resultVar p
-  0x14 {-add-} -> do let sum = readType x + readType y
-                     resultVar <- consumeByte
-                     setVar resultVar sum
+                          setResult p
+  0x14 {-add-} -> setResult (readType x + readType y)
   _ -> error $ "Got unknown 2OP:" ++ showHex opcode ++ " with args " ++ show x ++ ", " ++ show y
 
 execShortOP :: Byte -> Emulator ()
@@ -119,8 +116,7 @@ execVAROP b = do
 doVAROP opcode args = case opcode of
   0x0 {-call_vs-} -> do let values = map readType args
                         res <- callRoutine (head values) (tail values)
-                        resultVar <- consumeByte
-                        setVar resultVar res
+                        setResult res
   0x6 {-print_num-} -> do let val = head args
                           liftIO . putStr . show $ readType val
   0x19 {-call_vn-} -> do let values = map readType args

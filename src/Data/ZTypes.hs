@@ -5,6 +5,7 @@ module Data.ZTypes ( ZType(..)
                    , getVar
                    , setVar
                    , setVarType
+                   , setResult
                    ) where
 
 import Control.Lens
@@ -41,6 +42,10 @@ setVarType :: ZType -> ZType -> Emulator ()
 setVarType x y = do let xval = readType x
                         yval = readType y
                     setVar (fromIntegral xval) yval
+
+setResult :: Word -> Emulator ()
+setResult w = do resultVar <- consumeByte
+                 setVar resultVar w
 
 setVar :: Byte -> Word -> Emulator ()
 setVar n v
