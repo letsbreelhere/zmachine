@@ -38,6 +38,9 @@ do2OP opcode x y = case opcode of
   0x3 {-jg-} -> getLabel >>= jumpWith (readType x > readType y)
   0xb {-set_attr-} -> D.log "Skipping"
   0xd {-store-} -> setVarType x y
+  0x14 {-add-} -> do let sum = readType x + readType y
+                     resultVar <- consumeByte
+                     setVar resultVar sum
   _ -> error $ "Got unknown 2OP:" ++ showHex opcode ++ " with args " ++ show x ++ ", " ++ show y
 
 execShortOP :: Byte -> Emulator ()
