@@ -71,7 +71,10 @@ jumpWith :: Bool -> (Int, Bool) -> Emulator ()
 jumpWith predicate (label, backwards) = do let shouldJump = if backwards
                                                               then not predicate
                                                               else predicate
-                                           when shouldJump (thePC += label - 2)
+                                           case label of
+                                             0 -> returnWith 0
+                                             1 -> returnWith 1
+                                             _ -> when shouldJump (thePC += label - 2)
 
 exec1OP :: Byte -> ZType -> Emulator ()
 exec1OP opcode t = case opcode of
@@ -121,3 +124,6 @@ callRoutine routine args = do
                       shouldReturn <- use $ curFrame.returnValue.to isJust
                       hasQuit <- use quit
                       when (not $ shouldReturn || hasQuit) execLoop
+
+returnWith :: Word -> Emulator ()
+returnWith = (curFrame.returnValue.=) . Just
