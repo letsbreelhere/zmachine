@@ -42,16 +42,18 @@ execShortOP b = do
   t <- lookupType (testBit b 5, testBit b 4)
   maybe (exec0OP opcode) (exec1OP opcode) t
 
-exec0OP opcode = case opcode of
-  0x2 {-print-} -> do ws <- getStringWords
-                      liftIO . putStr $ decode ws
-  0xa {-quit-} -> quit .= True
-  _ -> error $ "Got unknown 0OP:" ++ showHex opcode
+getZString = do ws <- getStringWords
+                return $ decode ws
   where getStringWords = do w <- consumeWord
                             if testBit w 15
                               then return [w]
                               else do ws <- getStringWords
                                       return (w:ws)
+
+exec0OP opcode = case opcode of
+  0x2 {-print-} -> getZString >>= liftIO . putStr
+  0xa {-quit-} -> quit .= True
+  _ -> error $ "Got unknown 0OP:" ++ showHex opcode
 
 exec1OP :: Byte -> ZType -> Emulator ()
 exec1OP opcode t = case opcode of
@@ -60,6 +62,12 @@ exec1OP opcode t = case opcode of
                      D.log $ "PC is " ++ showHex p
                      D.log $ "Jumping to " ++ show (signedWord label)
                      thePC += signedWord label - 2
+  0xd {-print_paddr-} -> do let ZWord packed = t
+                                stringAddr = unpackAddress packed
+                            origPC <- use thePC
+                            thePC .= stringAddr
+                            getZString >>= liftIO . putStr
+                            thePC .= origPC
   _ -> error $ "Got unknown 1OP:" ++ showHex opcode ++ " with argument " ++ show t
 
 execVAROP :: Byte -> Emulator ()
@@ -78,7 +86,7 @@ doVAROP opcode args = case opcode of
 
 callRoutine :: Word -> [Word] -> Emulator Word
 callRoutine routine args = do
-  let raddr = 4 * fromIntegral routine
+  let raddr = unpackAddress routine
   numLocals <- fmap fromIntegral (peekByteAt raddr)
   let locals = replicate numLocals 0
       newFrame = newStackFrame (raddr + 1) locals

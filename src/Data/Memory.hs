@@ -8,6 +8,7 @@ module Data.Memory ( Byte
                    , fromByteString
                    , bytes
                    , word
+                   , unpackAddress
                    ) where
 
 import Data.Array
@@ -44,3 +45,6 @@ wordAt ix m = let b1 = byteAt ix m
 fromByteString :: B.ByteString -> Memory
 fromByteString bstr = let bs = B.unpack bstr
                       in Memory $ listArray (0, length bs) bs
+
+unpackAddress :: Word -> Int
+unpackAddress = (4*) . fromIntegral
