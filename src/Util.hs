@@ -22,7 +22,7 @@ signedWord :: Word -> Int
 signedWord = signAtBit 15
 
 signAtBit :: (Integral a, Bits a) => Int -> a -> Int
-signAtBit n b = let b' = b .&. (bit (n+1) - 1) in
-  fromIntegral $ if testBit b n
-                   then b' - 2^(n+1)
-                   else b'
+signAtBit n b = let b' = fromIntegral $ b .&. (bit (n+1) - 1)
+                in fromIntegral $ if testBit b n
+                                    then b' - 2^(n+1)
+                                    else b'
