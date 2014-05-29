@@ -1,0 +1,9 @@
+[Main x;
+  x = 41;
+  print "The answer is ", answer(x, 1), ".^";
+  @quit;
+];
+
+[answer x;
+  return (x+1);
+];
