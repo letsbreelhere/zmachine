@@ -189,6 +189,14 @@ execEXTOP = do
   doEXTOP b args
 
 doEXTOP opcode args = case opcode of
+  0x2 {-log_shift-} -> do let [number', places'] = args
+                              number = readType number'
+                              places = signedWord (readType places')
+                          setResult . fromIntegral $ number `shift` places
+  0x3 {-art_shift-} -> do let [number', places'] = args
+                              number = signedWord (readType number')
+                              places = signedWord (readType places')
+                          setResult . fromIntegral $ number `shift` places
   _ -> error $ "Got unknown EXTOP " ++ showHex opcode ++ " with arguments " ++ show args
 
 returnWith :: Word -> Emulator ()
