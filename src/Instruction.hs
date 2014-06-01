@@ -106,7 +106,7 @@ exec1OP opcode t = D.log ("Executing 1OP:" ++ showHex opcode ++ " with arg " ++ 
                    getLabel >>= jumpWith (val == 0)
   0x4 {-get_prop_len-} -> do mp <- withTmpPC (fromIntegral $ readType t) $ consumeProperty
                              setResult $ case mp of
-                               Nothing -> 0
+                               Nothing -> error "Use default property length here?"
                                Just p  -> fromIntegral . length $ p^.propData
   0xc {-jump-} -> do let (ZWord label) = t
                      p <- use thePC
