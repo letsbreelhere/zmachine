@@ -170,6 +170,18 @@ doVAROP opcode args = case opcode of
   0x0 {-call_vs-} -> do let values = map readType args
                         res <- callRoutine (head values) (tail values)
                         setResult res
+  0x1 {-storew-} -> do
+    let (array':wordIndex':value':_) = args
+        array = fromIntegral $ readType array'
+        wordIndex = fromIntegral $ readType wordIndex'
+        value = fromIntegral $ readType value'
+    memory %= writeWord (array+2*wordIndex) value
+  0x2 {-storeb-} -> do
+    let (array':byteIndex':value':_) = args
+        array = fromIntegral $ readType array'
+        byteIndex = fromIntegral $ readType byteIndex'
+        value = fromIntegral $ readType value'
+    memory %= writeByte (array+byteIndex) value
   0x6 {-print_num-} -> do let val = head args
                           liftIO . putStr . show . signedWord $ readType val
   0x8 {-push-} -> setVar 0 (readType $ head args)
