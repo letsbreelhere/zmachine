@@ -36,8 +36,8 @@ do2OP opcode x y = do
   D.log $ "Executing 2OP:" ++ showHex opcode ++ " with args " ++ show (x,y)
   case opcode of
     0x1 {-je-} -> getLabel >>= jumpWith (readType x == readType y)
-    0x2 {-jl-} -> getLabel >>= jumpWith (readType x < readType y)
-    0x3 {-jg-} -> getLabel >>= jumpWith (readType x > readType y)
+    0x2 {-jl-} -> getLabel >>= jumpWith (signedWord (readType x) < signedWord (readType y))
+    0x3 {-jg-} -> getLabel >>= jumpWith (signedWord (readType x) > signedWord (readType y))
     0x4 {-dec_chk-} -> do l <- getLabel
                           curVar <- getVar (fromIntegral $ readType x)
                           setVar (fromIntegral $ readType x) (curVar - 1)
@@ -53,6 +53,7 @@ do2OP opcode x y = do
     0x15 {-sub-} -> setResult (readType x - readType y)
     0x19 {-call_2s-} -> do res <- callRoutine (readType x) [readType y]
                            setResult res
+    0x1a {-call_2n-} -> void $ callRoutine (readType x) [readType y]
     _ -> error $ "Got unknown 2OP:" ++ showHex opcode ++ " with args " ++ show x ++ ", " ++ show y
 
 execShortOP :: Byte -> Emulator ()
@@ -137,7 +138,9 @@ execVAROP b = do
       doVAROP opcode args
     else case args of
            [x,y] -> do2OP opcode x y
-           _ -> error "Wrong number of arguments supplied to 2OP"
+           (x:ys) -> if opcode == 1 -- Wooo, special cases! `je`
+                       then getLabel >>= jumpWith (readType x `elem` map readType ys)
+                       else error $ "Wrong number of arguments supplied to 2OP:" ++ showHex opcode ++ " - " ++ show args
 
 doVAROP opcode args = case opcode of
   0x0 {-call_vs-} -> do let values = map readType args
