@@ -167,7 +167,7 @@ doVAROP opcode args = case opcode of
   0x6 {-print_num-} -> do let val = head args
                           liftIO . putStr . show . signedWord $ readType val
   0x8 {-push-} -> setVar 0 (readType $ head args)
-  0x9 {-pull-} -> getVar 0 >>= setResult
+  0x9 {-pull-} -> getVar 0 >>= setVar (fromIntegral . readType . head $ args)
   0x18 {-not-} -> setResult $ complement (readType $ head args)
   0x19 {-call_vn-} -> do let values = map readType args
                          _ <- callRoutine (head values) (tail values)
