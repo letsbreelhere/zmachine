@@ -104,11 +104,10 @@ exec1OP :: Byte -> ZType -> Emulator ()
 exec1OP opcode t = D.log ("Executing 1OP:" ++ showHex opcode ++ " with arg " ++ show t) >> case opcode of
   0x0 {-jz-} -> do let val = readType t
                    getLabel >>= jumpWith (val == 0)
-  0x4 {-get_prop_len-} -> withTmpPC (fromIntegral $ readType t) $ do
-                            mp <- consumeProperty
-                            setResult $ case mp of
-                              Nothing -> 0
-                              Just p  -> fromIntegral . length $ p^.propData
+  0x4 {-get_prop_len-} -> do mp <- withTmpPC (fromIntegral $ readType t) $ consumeProperty
+                             setResult $ case mp of
+                               Nothing -> 0
+                               Just p  -> fromIntegral . length $ p^.propData
   0xc {-jump-} -> do let (ZWord label) = t
                      p <- use thePC
                      D.log $ "PC is " ++ showHex p
