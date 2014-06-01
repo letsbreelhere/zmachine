@@ -53,7 +53,7 @@ do2OP opcode x y = do
                         peekWordAt (array + wordIndex) >>= setResult
     0x10 {-loadb-} -> do let array     = readType x
                              byteIndex = readType y
-                         peekWordAt (array + byteIndex) >>= setResult
+                         peekByteAt (array + byteIndex) >>= setResult . fromIntegral
     0x11 {-get_prop-} -> do obj <- object (readType x)
                             Just p <- propertyWord obj (fromIntegral $ readType y)
                             setResult p
