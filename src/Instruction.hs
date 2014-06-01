@@ -120,6 +120,7 @@ exec1OP opcode t = D.log ("Executing 1OP:" ++ showHex opcode ++ " with arg " ++ 
                             thePC .= stringAddr
                             getZString >>= liftIO . putStr
                             thePC .= origPC
+  0xf {-call_1n-} -> void $ callRoutine (readType t) []
   _ -> error $ "Got unknown 1OP:" ++ showHex opcode ++ " with argument " ++ show t
 
 execVAROP :: Byte -> Emulator ()
