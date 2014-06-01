@@ -61,8 +61,13 @@ do2OP opcode x y = do
     0x14 {-add-} -> doArith (+)
     0x15 {-sub-} -> doArith (-)
     0x16 {-mul-} -> doArith (*)
-    0x17 {-div-} -> doArith div
-    0x18 {-mod-} -> doArith mod
+    0x17 {-div-} -> do let res = truncate $ (fromIntegral . signedWord . readType) x / (fromIntegral . signedWord . readType) y
+                       setResult res
+    0x18 {-mod-} -> do let quo = truncate $ (fromIntegral . signedWord . readType) x / (fromIntegral . signedWord . readType) y
+                           s = signedWord . readType $ x
+                           t = signedWord . readType $ y
+                           res = fromIntegral $ s - t * quo
+                       setResult res
     0x19 {-call_2s-} -> do res <- callRoutine (readType x) [readType y]
                            setResult res
     0x1a {-call_2n-} -> void $ callRoutine (readType x) [readType y]
@@ -160,7 +165,7 @@ doVAROP opcode args = case opcode of
                         res <- callRoutine (head values) (tail values)
                         setResult res
   0x6 {-print_num-} -> do let val = head args
-                          liftIO . putStr . show $ readType val
+                          liftIO . putStr . show . signedWord $ readType val
   0x8 {-push-} -> setVar 0 (readType $ head args)
   0x9 {-pull-} -> getVar 0 >>= setResult
   0x18 {-not-} -> setResult $ complement (readType $ head args)
