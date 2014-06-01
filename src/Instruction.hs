@@ -39,10 +39,12 @@ do2OP opcode x y = do
     0x1 {-je-} -> getLabel >>= jumpWith (readType x == readType y)
     0x2 {-jl-} -> getLabel >>= jumpWith (signedWord (readType x) < signedWord (readType y))
     0x3 {-jg-} -> getLabel >>= jumpWith (signedWord (readType x) > signedWord (readType y))
-    0x4 {-dec_chk-} -> do l <- getLabel
-                          curVar <- getVar (fromIntegral $ readType x)
+    0x4 {-dec_chk-} -> do curVar <- getVar (fromIntegral $ readType x)
                           setVar (fromIntegral $ readType x) (curVar - 1)
-                          jumpWith (curVar - 1 < readType y) l
+                          getLabel >>= jumpWith (curVar - 1 < readType y)
+    0x5 {-inc_chk-} -> do curVar <- getVar (fromIntegral $ readType x)
+                          setVar (fromIntegral $ readType x) (curVar + 1)
+                          getLabel >>= jumpWith (curVar + 1 > readType y)
     0x8 {-or-} -> doBitwise (.|.)
     0x9 {-and-} -> doBitwise (.&.)
     0xd {-store-} -> setVarType x y
@@ -131,6 +133,9 @@ exec1OP opcode t = D.log ("Executing 1OP:" ++ showHex opcode ++ " with arg " ++ 
   0x5 {-inc-} -> do let var = fromIntegral (readType t) :: Byte
                     v <- getVar var
                     setVar var (v + 1)
+  0x6 {-dec-} -> do let var = fromIntegral (readType t) :: Byte
+                    v <- getVar var
+                    setVar var (v - 1)
   0xb {-ret-} -> returnWith (readType t)
   0xc {-jump-} -> do let (ZWord label) = t
                      p <- use thePC
@@ -142,6 +147,7 @@ exec1OP opcode t = D.log ("Executing 1OP:" ++ showHex opcode ++ " with arg " ++ 
                             thePC .= stringAddr
                             getZString >>= liftIO . putStr
                             thePC .= origPC
+  0xe {-load-} -> getVar (fromIntegral $ readType t) >>= setResult
   0xf {-call_1n-} -> void $ callRoutine (readType t) []
   _ -> error $ "Got unknown 1OP:" ++ showHex opcode ++ " with argument " ++ show t
 
