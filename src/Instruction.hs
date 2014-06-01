@@ -15,6 +15,7 @@ import Data.CallStack
 import Zscii
 
 exec :: Byte -> Emulator ()
+exec 0xbe = execEXTOP
 exec b = do
   case (testBit b 7, testBit b 6) of
     (False,    _) -> exec2OP     b
@@ -180,6 +181,15 @@ callRoutine routine args = do
                       shouldReturn <- use $ curFrame.returnValue.to isJust
                       hasQuit <- use quit
                       when (not $ shouldReturn || hasQuit) execLoop
+
+execEXTOP = do
+  b <- consumeByte
+  args <- parseTypeByte =<< consumeByte
+  D.log $ "Executing EXTOP:" ++ showHex b
+  doEXTOP b args
+
+doEXTOP opcode args = case opcode of
+  _ -> error $ "Got unknown EXTOP " ++ showHex opcode ++ " with arguments " ++ show args
 
 returnWith :: Word -> Emulator ()
 returnWith v = do D.log $ "Returning " ++ showHex v
