@@ -108,6 +108,7 @@ exec1OP opcode t = D.log ("Executing 1OP:" ++ showHex opcode ++ " with arg " ++ 
                              setResult $ case mp of
                                Nothing -> error "Use default property length here?"
                                Just p  -> fromIntegral . length $ p^.propData
+  0xb {-ret-} -> returnWith (readType t)
   0xc {-jump-} -> do let (ZWord label) = t
                      p <- use thePC
                      D.log $ "PC is " ++ showHex p
