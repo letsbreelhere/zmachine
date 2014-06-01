@@ -42,6 +42,8 @@ do2OP opcode x y = do
                           curVar <- getVar (fromIntegral $ readType x)
                           setVar (fromIntegral $ readType x) (curVar - 1)
                           jumpWith (curVar - 1 < readType y) l
+    0x8 {-or-} -> doBitwise (.|.)
+    0x9 {-and-} -> doBitwise (.&.)
     0xd {-store-} -> setVarType x y
     0x11 {-get_prop-} -> do obj <- object (readType x)
                             Just p <- propertyWord obj (fromIntegral $ readType y)
@@ -49,12 +51,17 @@ do2OP opcode x y = do
     0x12 {-get_prop_addr-} -> do obj <- object (readType x)
                                  p <- property obj (fromIntegral $ readType y)
                                  setResult $ maybe 0 (fromIntegral . (^.propAddr)) p
-    0x14 {-add-} -> setResult (readType x + readType y)
-    0x15 {-sub-} -> setResult (readType x - readType y)
+    0x14 {-add-} -> doArith (+)
+    0x15 {-sub-} -> doArith (-)
+    0x16 {-mul-} -> doArith (*)
+    0x17 {-div-} -> doArith div
+    0x18 {-mod-} -> doArith mod
     0x19 {-call_2s-} -> do res <- callRoutine (readType x) [readType y]
                            setResult res
     0x1a {-call_2n-} -> void $ callRoutine (readType x) [readType y]
     _ -> error $ "Got unknown 2OP:" ++ showHex opcode ++ " with args " ++ show x ++ ", " ++ show y
+  where doArith f = setResult . fromIntegral $ signedWord (readType x) `f` signedWord (readType y)
+        doBitwise f = setResult $ readType x `f` readType y
 
 execShortOP :: Byte -> Emulator ()
 execShortOP b = do
@@ -118,8 +125,7 @@ exec1OP opcode t = D.log ("Executing 1OP:" ++ showHex opcode ++ " with arg " ++ 
                      D.log $ "PC is " ++ showHex p
                      D.log $ "Jumping to " ++ show (signedWord label)
                      thePC += signedWord label - 2
-  0xd {-print_paddr-} -> do let ZWord packed = t
-                                stringAddr = unpackAddress packed
+  0xd {-print_paddr-} -> do let stringAddr = unpackAddress (readType t)
                             origPC <- use thePC
                             thePC .= stringAddr
                             getZString >>= liftIO . putStr
@@ -149,6 +155,8 @@ doVAROP opcode args = case opcode of
   0x6 {-print_num-} -> do let val = head args
                           liftIO . putStr . show $ readType val
   0x8 {-push-} -> setVar 0 (readType $ head args)
+  0x9 {-pull-} -> getVar 0 >>= setResult
+  0x18 {-not-} -> setResult $ complement (readType $ head args)
   0x19 {-call_vn-} -> do let values = map readType args
                          _ <- callRoutine (head values) (tail values)
                          return ()
