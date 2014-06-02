@@ -153,9 +153,7 @@ execVAROP :: Byte -> Emulator ()
 execVAROP b = do
   let opcode = b .&. (bit 5 - 1)
       isVAR  = testBit b 5
-  args <- case opcode of
-            0xc   -> parseTypeWord =<< consumeWord
-            _     -> parseTypeByte =<< consumeByte
+  args <- getArgs opcode isVAR
   if isVAR
     then do
       D.log ("Executing VAROP:" ++ showHex opcode ++ " with args " ++ show args)
@@ -165,6 +163,11 @@ execVAROP b = do
            (x:ys) -> if opcode == 1 -- Wooo, special cases! `je`
                        then getLabel >>= jumpWith (readType x `elem` map readType ys)
                        else error $ "Wrong number of arguments supplied to 2OP:" ++ showHex opcode ++ " - " ++ show args
+  where getArgs opcode isVAR
+          | not isVAR = parseTypeByte =<< consumeByte
+          | opcode == 0xc  = parseTypeWord =<< consumeWord
+          | opcode == 0x1a = parseTypeWord =<< consumeWord
+          | otherwise = parseTypeByte =<< consumeByte
 
 doVAROP opcode args = case opcode of
   0x0 {-call_vs-} -> do let values = map readType args
@@ -192,6 +195,9 @@ doVAROP opcode args = case opcode of
   0x19 {-call_vn-} -> do let values = map readType args
                          _ <- callRoutine (head values) (tail values)
                          return ()
+  0x1a {-call_vn2-} -> do let values = map readType args
+                          _ <- callRoutine (head values) (tail values)
+                          return ()
   0x1f {-check_arg_count-} -> return () -- XXX
   _ -> error $ "Got unknown VAROP " ++ showHex opcode ++ " with arguments " ++ show args
 
