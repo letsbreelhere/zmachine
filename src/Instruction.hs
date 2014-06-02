@@ -90,6 +90,7 @@ getZString = do ws <- getStringWords
 
 exec0OP opcode = D.log ("Executing 0OP:" ++ showHex opcode) >> case opcode of
   0x0 {-rtrue-} -> returnWith 1
+  0x1 {-rfalse-} -> returnWith 0
   0x2 {-print-} -> getZString >>= liftIO . putStr
   0x8 {-ret_popped-} -> getVar 0 >>= returnWith
   0xa {-quit-} -> quit .= True
