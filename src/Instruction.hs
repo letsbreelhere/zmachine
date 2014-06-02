@@ -70,9 +70,12 @@ do2OP opcode x y = do
                                  p <- property obj (fromIntegral $ readType y)
                                  setResult $ maybe 0 (fromIntegral . (^.propAddr)) p
     0x13 {-get_next_prop-} -> do obj <- object (readType x)
+                                 let propNum = fromIntegral $ readType y
                                  ps <- propertyList obj
-                                 ix <- propertyIndex obj (fromIntegral $ readType y)
-                                 let prop = ps `atMay` (ix+1)
+                                 ix <- case propNum of
+                                         0 -> return 0
+                                         _ -> fmap (+1) $ propertyIndex obj propNum
+                                 let prop = ps `atMay` ix
                                      res  = fmap (view num) prop
                                  setResult . fromIntegral . fromMaybe 0 $ res
     0x14 {-add-} -> doArith (+)
