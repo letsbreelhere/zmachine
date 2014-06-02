@@ -54,9 +54,6 @@ do2OP opcode x y = do
     0x10 {-loadb-} -> do let array     = readType x
                              byteIndex = readType y
                          peekByteAt (array + byteIndex) >>= setResult . fromIntegral
-    0x11 {-get_prop-} -> do obj <- object (readType x)
-                            Just p <- propertyWord obj (fromIntegral $ readType y)
-                            setResult p
     0x12 {-get_prop_addr-} -> do obj <- object (readType x)
                                  p <- property obj (fromIntegral $ readType y)
                                  setResult $ maybe 0 (fromIntegral . (^.propAddr)) p
@@ -136,6 +133,7 @@ exec1OP opcode t = D.log ("Executing 1OP:" ++ showHex opcode ++ " with arg " ++ 
   0x6 {-dec-} -> do let var = fromIntegral (readType t) :: Byte
                     v <- getVar var
                     setVar var (v - 1)
+  0x8 {-call_1s-} -> callRoutine (readType t) [] >>= setResult
   0xb {-ret-} -> returnWith (readType t)
   0xc {-jump-} -> do let (ZWord label) = t
                      p <- use thePC
@@ -155,7 +153,9 @@ execVAROP :: Byte -> Emulator ()
 execVAROP b = do
   let opcode = b .&. (bit 5 - 1)
       isVAR  = testBit b 5
-  args <- parseTypeByte =<< consumeByte
+  args <- case opcode of
+            0xc   -> parseTypeWord =<< consumeWord
+            _     -> parseTypeByte =<< consumeByte
   if isVAR
     then do
       D.log ("Executing VAROP:" ++ showHex opcode ++ " with args " ++ show args)
@@ -186,6 +186,8 @@ doVAROP opcode args = case opcode of
                           liftIO . putStr . show . signedWord $ readType val
   0x8 {-push-} -> setVar 0 (readType $ head args)
   0x9 {-pull-} -> getVar 0 >>= setVar (fromIntegral . readType . head $ args)
+  0xc {-call_vs2-} -> do let values = map readType args
+                         callRoutine (head values) (tail values) >>= setResult
   0x18 {-not-} -> setResult $ complement (readType $ head args)
   0x19 {-call_vn-} -> do let values = map readType args
                          _ <- callRoutine (head values) (tail values)

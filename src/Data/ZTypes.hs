@@ -1,5 +1,6 @@
 module Data.ZTypes ( ZType(..)
                    , parseTypeByte
+                   , parseTypeWord
                    , lookupType
                    , readType
                    , getVar
@@ -69,6 +70,16 @@ lookupType pair = case pair of
   _              -> return Nothing
 
 parseTypeByte :: Byte -> Emulator [ZType]
-parseTypeByte b = let topTwoBits b' = (testBit b' 7, testBit b' 6)
-                      bitPairs = takeWhile (/= (True,True)) . map topTwoBits . take 4 $ iterate (`shiftL` 2) b
-                  in fmap (map fromJust) . mapM lookupType $ bitPairs
+parseTypeByte b = fmap (map fromJust) . mapM lookupType $ bitPairs b
+
+parseTypeWord :: Word -> Emulator [ZType]
+parseTypeWord w = let (b1, b2) = bytes w
+                      bs = bitPairs b1 ++ bitPairs b2
+                  in fmap (map fromJust) . mapM lookupType $ bs
+
+bitPairs :: Byte -> [(Bool,Bool)]
+bitPairs b' = takeWhile (/= (True, True)) [ (testBit b' 7, testBit b' 6)
+                                          , (testBit b' 5, testBit b' 4)
+                                          , (testBit b' 3, testBit b' 2)
+                                          , (testBit b' 1, testBit b' 0)
+                                          ]
