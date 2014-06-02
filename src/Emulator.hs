@@ -38,7 +38,7 @@ load bstr = EmuState newCallStack
                      defaultOptions
   where newMemory = fromByteString bstr
         newCallStack = stackFrame :# []
-        stackFrame = newStackFrame (fromIntegral $ wordAt 0x6 newMemory) []
+        stackFrame = newStackFrame (fromIntegral $ wordAt 0x6 newMemory) [] 0
 
 globalVar :: Byte -> Emulator Word
 globalVar b = do globalsStart <- use $ memory.to (wordAt 0xc)
@@ -74,4 +74,3 @@ withTmpPC p action = do oldPC <- use thePC
                         res <- action
                         thePC .= oldPC
                         return res
-

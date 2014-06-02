@@ -199,7 +199,10 @@ doVAROP opcode args = case opcode of
   0x1a {-call_vn2-} -> do let values = map readType args
                           _ <- callRoutine (head values) (tail values)
                           return ()
-  0x1f {-check_arg_count-} -> return () -- XXX
+  0x1f {-check_arg_count-} -> do
+    let expectedArgs = readType (head args)
+    actualArgs <- use $ curFrame.argCount
+    getLabel >>= jumpWith (fromIntegral expectedArgs == actualArgs)
   _ -> error $ "Got unknown VAROP " ++ showHex opcode ++ " with arguments " ++ show args
 
 callRoutine :: Word -> [Word] -> Emulator Word
@@ -207,7 +210,7 @@ callRoutine routine args = do
   let raddr = unpackAddress routine
   numLocals <- fmap fromIntegral (peekByteAt raddr)
   let locals = take numLocals $ args ++ repeat 0
-      newFrame = newStackFrame (raddr + 1) locals
+      newFrame = newStackFrame (raddr + 1) locals (length args)
   D.log $ "Executing routine at " ++ showHex raddr ++ " with " ++ show args
   callStack %= push newFrame
   execLoop

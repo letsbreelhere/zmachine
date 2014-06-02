@@ -10,6 +10,7 @@ module Data.CallStack ( StackFrame
                       , top
                       , bottom
                       , push
+                      , argCount
                       , discard
                       , NEList(..)
                       ) where
@@ -44,11 +45,16 @@ data StackFrame = StackFrame { _pc :: Int
                              , _localVars :: Array Byte Word
                              , _localStack :: [Word]
                              , _returnValue :: Maybe Word
+                             , _argCount :: Int
                              }
 
 makeLenses ''StackFrame
 
-newStackFrame :: Int -> [Word] -> StackFrame
-newStackFrame pc xs = StackFrame pc (listArray (0, fromIntegral $ length xs) xs) [] Nothing
+newStackFrame :: Int -> [Word] -> Int -> StackFrame
+newStackFrame pc xs n = StackFrame pc
+                                   (listArray (0, fromIntegral $ length xs) xs)
+                                   []
+                                   Nothing
+                                   0
 
 type CallStack = NEList StackFrame
