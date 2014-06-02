@@ -66,6 +66,11 @@ putByte b = do addr <- use thePC
                memory %= writeByte addr b
                thePC += 1
 
+putWord :: Word -> Emulator' ()
+putWord w = do let (b1,b2) = bytes w
+               putByte b1
+               putByte b2
+
 peekWordAt :: (Integral a) => a -> Emulator' Word
 peekWordAt i = use $ memory.to (wordAt $ fromIntegral i)
 

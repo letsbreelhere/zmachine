@@ -12,6 +12,7 @@ import Data.List
 import Data.Maybe
 import Data.Memory
 import Data.Bits
+import Safe
 import Util
 import Zscii
 import Data.List (find)
@@ -34,6 +35,19 @@ data Object = Object { _attributes :: [Bool]
   deriving (Show)
 
 makeLenses ''Object
+
+propertyDefaults :: Emulator' [Property]
+propertyDefaults = do oaddr <- objectTableAddr
+                      withTmpPC oaddr $ do forM [0..62] $ \i -> do
+                                           w <- consumeWord
+                                           let (b1, b2) = bytes w
+                                           return $ Property (i+1) [b1,b2] 0
+
+property :: Object -> Int -> Maybe Property
+property obj ix = (obj^.properties) `atMay` ix
+
+propertyIndex :: Object -> Int -> Maybe Int
+propertyIndex obj propNum = findIndex ((==propNum) . fromIntegral . view num) (obj^.properties)
 
 object :: Word -> Lens' EmuState Object
 object w = lens getter setter
@@ -82,22 +96,24 @@ consumeProperty = do addr <- use thePC
 writeProperty :: Word -> Property -> Emulator' ()
 writeProperty = undefined
 
-objectTableAddr :: Word -> Emulator' Int
-objectTableAddr w = do tableStart <- use $ memory.to (wordAt 0x0a)
-                       let defaultsLength = 63 * 2
-                       return $ fromIntegral (tableStart + defaultsLength)
+objectTableAddr :: Emulator' Int
+objectTableAddr = do tableStart <- use $ memory.to (wordAt 0x0a)
+                     let defaultsLength = 63 * 2
+                     return $ fromIntegral (tableStart + defaultsLength)
 
 objectAddr :: Word -> Emulator' Int
-objectAddr w = do start <- objectTableAddr w
+objectAddr w = do start <- objectTableAddr
                   return $ start + fromIntegral (w-1) * 14
 
 writeObject :: Object -> Int -> Emulator' ()
 writeObject obj addr = withTmpPC addr $ do
-  mapM_ putByte . toBytes . reverse $ obj^.attributes
+  mapM_ putByte . toBytes . view attributes $ obj
+  mapM_ (putWord . flip view obj) [parent,sibling,child]
+  return ()
 
 toBytes :: [Bool] -> [Byte]
 toBytes [] = []
-toBytes (a:b:c:d:e:f:g:h:xs) = toByte [a,b,c,d,e,f,g,h] : toBytes xs
+toBytes (a:b:c:d:e:f:g:h:xs) = toByte [h,g,f,e,d,c,b,a] : toBytes xs
   where toByte bs = sum . map toByte' $ zip bs [0..]
         toByte' (False,_) = 0
         toByte' (True,i) = bit i

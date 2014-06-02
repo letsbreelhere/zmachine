@@ -1,3 +1,5 @@
+{-# LANGUAGE TemplateHaskell, FlexibleContexts, RankNTypes #-}
+
 module Instruction (exec) where
 
 import Control.Monad.State
@@ -5,7 +7,7 @@ import Control.Monad
 import Control.Lens
 import Data.Memory
 import Data.Maybe
-import Data.Object
+import Data.Object.Lens
 import Emulator
 import Util
 import Safe
@@ -46,19 +48,23 @@ do2OP opcode x y = do
     0x5 {-inc_chk-} -> do curVar <- getVar (fromIntegral $ readType x)
                           setVar (fromIntegral $ readType x) (curVar + 1)
                           getLabel >>= jumpWith (curVar + 1 > readType y)
-    0x6 {-jin-} -> do obj <- object (readType x)
+    0x6 {-jin-} -> do obj <- use $ object (readType x)
                       getLabel >>= jumpWith (obj^.parent == readType y)
     0x8 {-or-} -> doBitwise (.|.)
     0x9 {-and-} -> doBitwise (.&.)
-    0xa {-test_attr-} -> do obj <- object (readType x)
+    0xa {-test_attr-} -> do obj <- use $ object (readType x)
                             let attr = fromIntegral $ readType y
-                            getLabel >>= jumpWith (getAttr obj attr)
-    0xb {-set_attr-} -> do obj <- object (readType x)
+                            getLabel >>= jumpWith ((obj^.attributes) !! attr)
+    0xb {-set_attr-} -> do let w = readType x
+                           obj <- use $ object w
                            let attr = fromIntegral $ readType y
-                           setAttr obj attr
-    0xc {-clear_attr-} -> do obj <- object (readType x)
+                               newAttrs = take attr (obj^.attributes) ++ [True] ++ drop (attr+1) (obj^.attributes)
+                           (object w).attributes .= newAttrs
+    0xc {-clear_attr-} -> do let w = readType x
+                             obj <- use $ object w
                              let attr = fromIntegral $ readType y
-                             clearAttr obj attr
+                                 newAttrs = take attr (obj^.attributes) ++ [False] ++ drop (attr+1) (obj^.attributes)
+                             (object w).attributes .= newAttrs
     0xd {-store-} -> setVarType x y
     0xf {-loadw-} -> do let array = readType x
                             wordIndex = 2 * readType y
@@ -66,25 +72,25 @@ do2OP opcode x y = do
     0x10 {-loadb-} -> do let array     = readType x
                              byteIndex = readType y
                          peekByteAt (array + byteIndex) >>= setResult . fromIntegral
-    0x11 {-get_prop-} -> do obj <- object (readType x)
+    0x11 {-get_prop-} -> do let w = readType x
+                            obj <- use $ object w
                             let ix = fromIntegral $ readType y
-                            p' <- property obj ix
+                                p' = obj `property` ix
                             defs <- propertyDefaults
                             let p = fromMaybe (defs !! ix) p'
                             case p^.propData of
                               [b]     -> setResult $ word 0 b
                               [b1,b2] -> setResult $ word b1 b2
                               _       -> error "Tried to set property of more than 2 bytes"
-    0x12 {-get_prop_addr-} -> do obj <- object (readType x)
-                                 p <- property obj (fromIntegral $ readType y)
+    0x12 {-get_prop_addr-} -> do obj <- use $ object (readType x)
+                                 let p = obj `property` (fromIntegral $ readType y)
                                  setResult $ maybe 0 (fromIntegral . (^.propAddr)) p
-    0x13 {-get_next_prop-} -> do obj <- object (readType x)
+    0x13 {-get_next_prop-} -> do obj <- use $ object (readType x)
                                  let propNum = fromIntegral $ readType y
-                                 ps <- propertyList obj
-                                 ix <- case propNum of
-                                         0 -> return 0
-                                         _ -> fmap (+1) $ propertyIndex obj propNum
-                                 let prop = ps `atMay` ix
+                                 let ix = case propNum of
+                                            0 -> Just 0
+                                            _ -> fmap (+1) $ propertyIndex obj propNum
+                                 let prop = ix >>= property obj
                                      res  = fmap (view num) prop
                                  setResult . fromIntegral . fromMaybe 0 $ res
     0x14 {-add-} -> doArith (+)
@@ -154,13 +160,13 @@ exec1OP :: Byte -> ZType -> Emulator ()
 exec1OP opcode t = D.log ("Executing 1OP:" ++ showHex opcode ++ " with arg " ++ show t) >> case opcode of
   0x0 {-jz-} -> do let val = readType t
                    getLabel >>= jumpWith (val == 0)
-  0x1 {-get_sibling-} -> do obj <- object (readType t)
+  0x1 {-get_sibling-} -> do obj <- use $ object (readType t)
                             setResult (obj^.sibling)
                             getLabel >>= jumpWith (obj^.sibling /= 0)
-  0x2 {-get_sibling-} -> do obj <- object (readType t)
+  0x2 {-get_sibling-} -> do obj <- use $ object (readType t)
                             setResult (obj^.child)
                             getLabel >>= jumpWith (obj^.child /= 0)
-  0x3 {-get_parent-}  -> object (readType t) >>= setResult . view parent
+  0x3 {-get_parent-}  -> use (object $ readType t) >>= setResult . view parent
   0x4 {-get_prop_len-} -> do mp <- withTmpPC (fromIntegral $ readType t) $ consumeProperty
                              setResult $ case mp of
                                Nothing -> error "Use default property length here?"
