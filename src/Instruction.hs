@@ -8,6 +8,7 @@ import Data.Maybe
 import Data.Object
 import Emulator
 import Util
+import Safe
 import qualified Debug as D
 import Data.Bits
 import Data.ZTypes
@@ -68,6 +69,12 @@ do2OP opcode x y = do
     0x12 {-get_prop_addr-} -> do obj <- object (readType x)
                                  p <- property obj (fromIntegral $ readType y)
                                  setResult $ maybe 0 (fromIntegral . (^.propAddr)) p
+    0x13 {-get_next_prop-} -> do obj <- object (readType x)
+                                 ps <- propertyList obj
+                                 ix <- propertyIndex obj (fromIntegral $ readType y)
+                                 let prop = ps `atMay` (ix+1)
+                                     res  = fmap (view num) prop
+                                 setResult . fromIntegral . fromMaybe 0 $ res
     0x14 {-add-} -> doArith (+)
     0x15 {-sub-} -> doArith (-)
     0x16 {-mul-} -> doArith (*)

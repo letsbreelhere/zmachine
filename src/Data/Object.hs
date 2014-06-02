@@ -5,8 +5,11 @@ module Data.Object where
 import qualified Debug as D
 import Control.Applicative
 import Control.Monad
+import Control.Monad.State
 import Control.Lens
 import Emulator
+import Data.List
+import Data.Maybe
 import Data.Memory
 import Data.Bits
 import Util
@@ -28,7 +31,7 @@ data Property = Property { _num :: Byte
                          , _propData :: [Byte]
                          , _propAddr :: Int
                          }
-  deriving (Show)
+  deriving (Show, Eq)
 
 makeLenses ''Property
 
@@ -123,6 +126,12 @@ property :: Object -> Int -> Emulator (Maybe Property)
 property obj i = do ps <- propertyList obj
                     return $ find (\p' -> p'^.num == fromIntegral i) ps
 
+propertyIndex :: Object -> Int -> Emulator Int
+propertyIndex obj i = do mprop <- property obj i
+                         ps    <- propertyList obj
+                         let ix = mprop >>= \prop -> elemIndex prop ps
+                         return $ fromMaybe 0 ix
+
 propertyWord :: Object -> Int -> Emulator (Maybe Word)
 propertyWord obj i = do mp <- property obj i
                         let p = fmap (^.propData) mp
@@ -155,5 +164,5 @@ consumeProperty = do addr <- use thePC
         twoByteSize b = do let propNum = b .&. (bit 6 - 1)
                            b' <- consumeByte
                            let propLen' = fromIntegral $ b' .&. (bit 6 - 1)
-                               propLen = if propLen' == 0 then 64 else propLen
+                               propLen = if propLen' == 0 then 64 else propLen'
                            return (propNum, propLen)
