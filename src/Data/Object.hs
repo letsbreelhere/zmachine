@@ -85,6 +85,11 @@ parseObjectAt addr = withTmpPC addr $ do
                   addr
   where toBits b = map (testBit b) [7,6..0]
 
+getAttr :: Object -> Int -> Bool
+getAttr obj attr
+  | attr >= 48 = error $ "Tried to get an attr past 48: " ++ show attr
+  | otherwise  = obj^.attributes.to (!! attr)
+
 setAttr :: Object -> Int -> Emulator ()
 setAttr obj attr
   | attr >= 48 = error $ "Tried to set an attr past 48: " ++ show attr
