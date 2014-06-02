@@ -1,0 +1,7 @@
+* Move Data.Object functions from `Emulator` types to pure `EmuState` readers
+* Once above is done, migrate `object`, etc. to a `Lens' EmuState Object` form:
+  * object :: Word -> Lens' EmuState Object
+  * setAttr, getAttr, clearAttr, etc. follow
+* Setter for properties is more difficult - attempting to append the
+  properties list should cause an error, but changing an existing property
+  should work as expected.
