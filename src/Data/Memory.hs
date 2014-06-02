@@ -9,6 +9,7 @@ module Data.Memory ( Byte
                    , bytes
                    , word
                    , unpackAddress
+                   , unwrapMem
                    ) where
 
 import Data.Array

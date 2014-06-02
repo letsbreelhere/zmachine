@@ -207,6 +207,7 @@ execVAROP b = do
           | opcode == 0x1a = parseTypeWord =<< consumeWord
           | otherwise = parseTypeByte =<< consumeByte
 
+doVAROP :: Byte -> [ZType] -> Emulator ()
 doVAROP opcode args = case opcode of
   0x0 {-call_vs-} -> do let values = map readType args
                         res <- callRoutine (head values) (tail values)
@@ -223,6 +224,8 @@ doVAROP opcode args = case opcode of
         byteIndex = fromIntegral $ readType byteIndex'
         value = fromIntegral $ readType value'
     memory %= writeByte (array+byteIndex) value
+  0x3 {-put_prop-} -> do let (o:prop:value:_) = map readType args
+                         error "put_prop not implemented"
   0x6 {-print_num-} -> do let val = head args
                           liftIO . putStr . show . signedWord $ readType val
   0x8 {-push-} -> setVar 0 (readType $ head args)
