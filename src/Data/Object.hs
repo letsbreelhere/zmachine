@@ -59,11 +59,12 @@ object :: Word -> Emulator Object
 object w = objectAddr w >>= parseObjectAt
 
 propertyDefaults :: Emulator [Property]
-propertyDefaults = do tableStart <- fmap fromIntegral . use $ memory.to (wordAt 0x0a)
-                      forM [0..62] $ \i -> do
-                        w <- consumeWord
-                        let (b1, b2) = bytes w
-                        return $ Property (i+1) [b1,b2] 0
+propertyDefaults = do oaddr <- objectTableAddr
+                      withTmpPC oaddr $ do tableStart <- fmap fromIntegral . use $ memory.to (wordAt 0x0a)
+                                           forM [0..62] $ \i -> do
+                                             w <- consumeWord
+                                             let (b1, b2) = bytes w
+                                             return $ Property (i+1) [b1,b2] 0
 
 {-
 Each object has a 14-byte entry as follows:

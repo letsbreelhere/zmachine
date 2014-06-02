@@ -66,6 +66,15 @@ do2OP opcode x y = do
     0x10 {-loadb-} -> do let array     = readType x
                              byteIndex = readType y
                          peekByteAt (array + byteIndex) >>= setResult . fromIntegral
+    0x11 {-get_prop-} -> do obj <- object (readType x)
+                            let ix = fromIntegral $ readType y
+                            p' <- property obj ix
+                            defs <- propertyDefaults
+                            let p = fromMaybe (defs !! ix) p'
+                            case p^.propData of
+                              [b]     -> setResult $ word 0 b
+                              [b1,b2] -> setResult $ word b1 b2
+                              _       -> error "Tried to set property of more than 2 bytes"
     0x12 {-get_prop_addr-} -> do obj <- object (readType x)
                                  p <- property obj (fromIntegral $ readType y)
                                  setResult $ maybe 0 (fromIntegral . (^.propAddr)) p
