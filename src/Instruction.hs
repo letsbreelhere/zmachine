@@ -51,7 +51,7 @@ do2OP opcode x y = do
     0x9 {-and-} -> doBitwise (.&.)
     0xa {-test_attr-} -> do obj <- object (readType x)
                             let attr = fromIntegral $ readType y
-                            getLabel >>= jumpWith (obj^.attributes.to(!! attr))
+                            getLabel >>= jumpWith (getAttr obj attr)
     0xb {-set_attr-} -> do obj <- object (readType x)
                            let attr = fromIntegral $ readType y
                            setAttr obj attr
