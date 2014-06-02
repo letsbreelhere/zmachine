@@ -45,8 +45,19 @@ do2OP opcode x y = do
     0x5 {-inc_chk-} -> do curVar <- getVar (fromIntegral $ readType x)
                           setVar (fromIntegral $ readType x) (curVar + 1)
                           getLabel >>= jumpWith (curVar + 1 > readType y)
+    0x6 {-jin-} -> do obj <- object (readType x)
+                      getLabel >>= jumpWith (obj^.parent == readType y)
     0x8 {-or-} -> doBitwise (.|.)
     0x9 {-and-} -> doBitwise (.&.)
+    0xa {-test_attr-} -> do obj <- object (readType x)
+                            let attr = fromIntegral $ readType y
+                            getLabel >>= jumpWith (obj^.attributes.to(!! attr))
+    0xb {-set_attr-} -> do obj <- object (readType x)
+                           let attr = fromIntegral $ readType y
+                           setAttr obj attr
+    0xc {-clear_attr-} -> do obj <- object (readType x)
+                             let attr = fromIntegral $ readType y
+                             clearAttr obj attr
     0xd {-store-} -> setVarType x y
     0xf {-loadw-} -> do let array = readType x
                             wordIndex = 2 * readType y
@@ -124,6 +135,13 @@ exec1OP :: Byte -> ZType -> Emulator ()
 exec1OP opcode t = D.log ("Executing 1OP:" ++ showHex opcode ++ " with arg " ++ show t) >> case opcode of
   0x0 {-jz-} -> do let val = readType t
                    getLabel >>= jumpWith (val == 0)
+  0x1 {-get_sibling-} -> do obj <- object (readType t)
+                            setResult (obj^.sibling)
+                            getLabel >>= jumpWith (obj^.sibling /= 0)
+  0x2 {-get_sibling-} -> do obj <- object (readType t)
+                            setResult (obj^.child)
+                            getLabel >>= jumpWith (obj^.child /= 0)
+  0x3 {-get_parent-}  -> object (readType t) >>= setResult . view parent
   0x4 {-get_prop_len-} -> do mp <- withTmpPC (fromIntegral $ readType t) $ consumeProperty
                              setResult $ case mp of
                                Nothing -> error "Use default property length here?"

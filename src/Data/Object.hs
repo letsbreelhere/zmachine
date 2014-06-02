@@ -96,7 +96,17 @@ setAttr obj attr
   | otherwise = do oldPC <- use thePC
                    let attrAddress = obj^.address + (attr `div` 8)
                    b <- peekByteAt attrAddress
-                   let newByte = complementBit b (attr `mod` 8)
+                   let newByte = setBit b (7 - attr `mod` 8)
+                   memory %= writeByte attrAddress newByte
+                   thePC .= oldPC
+
+clearAttr :: Object -> Int -> Emulator ()
+clearAttr obj attr
+  | attr >= 48 = error $ "Tried to set an attr past 48: " ++ show attr
+  | otherwise = do oldPC <- use thePC
+                   let attrAddress = obj^.address + (attr `div` 8)
+                   b <- peekByteAt attrAddress
+                   let newByte = clearBit b (7 - attr `mod` 8)
                    memory %= writeByte attrAddress newByte
                    thePC .= oldPC
 
